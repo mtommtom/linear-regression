@@ -9,6 +9,10 @@ All of these algorithms are implemented by hand without the assist of any librar
 The data set used comes from UCI which contain red and white wine samples. They include many features one of which is
 wine quality which is what the linear regression algorithms will be trained to find.
 
+## Testing methods
+
+In order to test the effectivness of each algorithm, traning and test was randomly split with a 75% bias going towards training. Results were checked using mean squared error.
+
 ## Results
 
 All of the results are plotted with matplot lib.
@@ -45,3 +49,7 @@ Cortez, P., Cerdeira, A., Almeida, F., Matos, T., & Reis, J. (2009).
 Wine Quality [Dataset]. UCI Machine Learning Repository.
 https://doi.org/10.24432/C56S3T.
 ```
+
+## TODO
+* implement cross validation algorithm
+* implement a matrix decomposition algorithm to solve a linear regression

@@ -7,7 +7,6 @@ def zscore(mean, std_dev, x):
     return (mean - x) / std_dev
 
 
-
 def apply_weights_and_bias(inputs, weights, bias):
     '''
     given input varibles weights and bias
@@ -18,7 +17,6 @@ def apply_weights_and_bias(inputs, weights, bias):
         _sum += (inputs[i] * weights[i])
     
     return _sum
-
 
 def train_test_split(df, train_bias=.75):
     '''
