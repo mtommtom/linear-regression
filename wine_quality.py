@@ -37,11 +37,14 @@ def graph_background_information(df):
     '''
     given data frame graph:
         - correlation plot
+        - correlation plot of alcohol vs quality
     '''
+    sns.set_theme()
+    
+    # correlation plot
     correlations = df.corr()
 
     fig, ax = plt.subplots()
-    sns.set_theme()
     cmap = sns.diverging_palette(229, 19, as_cmap=True)
     ax = sns.heatmap(
         data = correlations,
@@ -51,6 +54,12 @@ def graph_background_information(df):
     ax.set_title('Wine features correlation plot')
     fig.tight_layout()
     fig.savefig('red_wine/correlations.png')
+
+    # alcohol vs quality
+    jointplot = sns.jointplot(x='quality', y='alcohol', data=df[['quality', 'alcohol']], kind='reg', ratio=2)
+    jointplot.figure.suptitle('quality vs alcohol percent (%)')
+    jointplot.figure.tight_layout()
+    jointplot.savefig('red_wine/alcohol_vs_quality.png')
 
 
 def graph_trials(results, name, cost=0, time=0):
