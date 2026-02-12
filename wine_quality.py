@@ -113,26 +113,35 @@ def main():
     batch_results, cost_batch = multiple_linear_regression(df, 1.0)
     batch_time = time.time() - start
 
+    # optimized
+    start = time.time()
+    o_mini_batch_results, o_cost_mini = optimized_multiple_linear_regression(df, .1)
+    o_mini_batch_time = time.time() - start
+
+    start = time.time()
+    o_batch_results, o_cost_batch = optimized_multiple_linear_regression(df, 1.0)
+    o_batch_time = time.time() - start
+
     graph_trials(mini_batch_results, f'Mini-batch Gradient Descent', cost = round(cost_mini, 2), time = round(mini_batch_time, 2))
     graph_trials(batch_results, f'Batch Gradient Descent', cost = round(cost_batch, 2), time = round(batch_time, 2))
+    graph_trials(o_mini_batch_results, f'(optimized) Mini-batch Gradient Descent', cost = round(o_cost_mini, 2), time = round(o_mini_batch_time, 2))
+    graph_trials(o_batch_results, f'(optimized) Batch Gradient Descent', cost = round(o_cost_batch, 2), time = round(o_batch_time, 2))
 
 
-def test():
-    df = prepreocess()
-
+def optimized_multiple_linear_regression(df, stochastic_sample_size):
     train, test = train_test_split(df)
     loss_per_epoch = []
 
     weights, bias = [0 for i in range(len(df.columns) - 1)], 0.0
-    weights, bias = optimized_stochastic_gradient_descent(train, lr=.0001, weights=weights, bias=bias, epoches=100, min_step_size=0.0001)
+    theta = optimized_stochastic_gradient_descent(train, lr=.0001, weights=weights, bias=bias, epoches=2000, min_step_size=0, error_over_time=loss_per_epoch, stochastic_sample_size=stochastic_sample_size)
 
-    print(weights, bias)
-    test_results = mean_squared_error(weights=weights, bias=bias, df=test)
+    print(theta)
+    test_results = mean_squared_error(weights=[theta[0, i] for i in range(theta.shape[1] - 1)], bias=theta[0, len(theta[0]) - 1], df=test)
     print('testing results (mse):', test_results)
+    return loss_per_epoch, test_results
 
 
 
 
 if __name__ == '__main__':
-    test()
-    # main()
+    main()

@@ -115,10 +115,10 @@ def stochastic_gradient_descent(_df, learning_rate=.01, min_step_size=.001, epoc
             break
     return (weights, bias)
 
-def matrix_mean_squared_error(theta, m):
-    return 0
+def matrix_mean_squared_error(theta, x, y):
+    return np.sum(np.square((theta.dot(x.T).T - y).T)) / len(x)
 
-def optimized_stochastic_gradient_descent(df, lr=.01, min_step_size=.001, epoches=100, weights=[1], bias=0, stochastic_sample_size=.1, displayProgress: bool=True):
+def optimized_stochastic_gradient_descent(df, lr=.01, min_step_size=.001, epoches=100, weights=[1], bias=0, stochastic_sample_size=.1, displayProgress: bool=True, error_over_time = []):
     '''
     optimized stochastic gradient descent method by using numpy and linear algebra
     
@@ -133,38 +133,39 @@ def optimized_stochastic_gradient_descent(df, lr=.01, min_step_size=.001, epoche
 
     # matrix = np.matrix([[df.iloc[i, j] for j in range(len(df.columns))] for name in df.columns])
     matrix = np.matrix([list(df[name]) for name in df.columns]).T
-    theta = np.append(np.array(weights), bias)
-    print(theta)
-    print("the above should be one list of weights and bias at end of list")
+    theta = np.matrix(np.append(np.array(weights), bias))
+    # print(theta)
+    # print("the above should be one list of weights and bias at end of list")
     epoch_number = 0
     while epoch_number < epoches:
         # sample (according to stochastic sample size) the dataframe
         _matrix = matrix[random.sample(range(0, len(df)), int(len(df) * stochastic_sample_size))]
-
         
-        # TODO make these next lines work correct
         # establish features (x) and labels (y)
-        x = _matrix[0:len(_matrix) - 2]
-        x = np.column_stack((_matrix, np.ones(len(_matrix))))
-        y = _matrix[len(_matrix) - 1]
-        print(x)
-        print("the above should be matrix")
-        print(y)
-        print("the above should be just one vector")
+        x = _matrix[:, 0:_matrix.shape[1] - 1]
+        x = np.column_stack((x, np.ones(len(x))))
+        y = _matrix[:, matrix.shape[1] - 1]
+        # print(x)
+        # print("the above should be matrix")
+        # print(y)
+        # print("the above should be just one vector")
 
         # get the step direction vector (direction to go) and the step vector with correct magnitude
         m = len(df)
-        step_direction_vector = (2/m) * x.T.dot(x.dot(theta) - y)
+        step_direction_vector = (2/m) * x.T.dot(theta.dot(x.T).T - y)
         step_vector = step_direction_vector * lr
         if displayProgress:
-            loss = matrix_mean_squared_error(theta, _matrix)
-            print(f'Epoch [{epoch_number}/{epoches}],   loss: {loss}')
+            loss = matrix_mean_squared_error(theta, x, y)
+            error_over_time.append(loss)
+            print(f'Epoch [{epoch_number + 1}/{epoches}],   loss: {loss}')
 
-        if any(step_vector < min_step_size):
-            break
+        # icond = step_direction_vector < min_step_size
+        # if icond.any():
+        #     break
 
         # change the weights (theta)
-        theta -= step_vector
+        theta -= step_vector.T
+        epoch_number += 1
     
     return theta
 
