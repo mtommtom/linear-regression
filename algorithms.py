@@ -6,6 +6,12 @@ import matplotlib.pyplot as plt
 def zscore(mean, std_dev, x):
     return (mean - x) / std_dev
 
+def standard_deviation(x):
+    n = len(x)
+    mean = sum(x) / n
+
+    dif = sum([i - mean for i in x])**2
+    return np.sqrt(dif / n)
 
 def apply_weights_and_bias(inputs, weights, bias):
     '''
@@ -77,6 +83,8 @@ def stochastic_gradient_descent(_df, learning_rate=.01, min_step_size=.001, epoc
     '''
     apply stochastic gradient decesnt algorithm given hyperparameters:
     learning rate, epoch count, starting weights, startign bias and stochastic gradient mini batch size
+
+    return (weights, bias) as a tuple of all given weights and biases
     '''
 
     step_num = 0
@@ -106,3 +114,57 @@ def stochastic_gradient_descent(_df, learning_rate=.01, min_step_size=.001, epoc
         if step_num >= epoches or can_stop: # do while loop
             break
     return (weights, bias)
+
+def matrix_mean_squared_error(theta, m):
+    return 0
+
+def optimized_stochastic_gradient_descent(df, lr=.01, min_step_size=.001, epoches=100, weights=[1], bias=0, stochastic_sample_size=.1, displayProgress: bool=True):
+    '''
+    optimized stochastic gradient descent method by using numpy and linear algebra
+    
+    :param df: dataframe of all features and label should be last column
+    :param lr: learning rate
+    :param min_step_size: if step size is less than this end program
+    :param epoches: how many repititions of gradient descent 
+    :param weights: the starting weights
+    :param bias: the starting bias
+    :param stochastic_sample_size: percent of each sample group for each epoch
+    '''
+
+    # matrix = np.matrix([[df.iloc[i, j] for j in range(len(df.columns))] for name in df.columns])
+    matrix = np.matrix([list(df[name]) for name in df.columns]).T
+    theta = np.append(np.array(weights), bias)
+    print(theta)
+    print("the above should be one list of weights and bias at end of list")
+    epoch_number = 0
+    while epoch_number < epoches:
+        # sample (according to stochastic sample size) the dataframe
+        _matrix = matrix[random.sample(range(0, len(df)), int(len(df) * stochastic_sample_size))]
+
+        
+        # TODO make these next lines work correct
+        # establish features (x) and labels (y)
+        x = _matrix[0:len(_matrix) - 2]
+        x = np.column_stack((_matrix, np.ones(len(_matrix))))
+        y = _matrix[len(_matrix) - 1]
+        print(x)
+        print("the above should be matrix")
+        print(y)
+        print("the above should be just one vector")
+
+        # get the step direction vector (direction to go) and the step vector with correct magnitude
+        m = len(df)
+        step_direction_vector = (2/m) * x.T.dot(x.dot(theta) - y)
+        step_vector = step_direction_vector * lr
+        if displayProgress:
+            loss = matrix_mean_squared_error(theta, _matrix)
+            print(f'Epoch [{epoch_number}/{epoches}],   loss: {loss}')
+
+        if any(step_vector < min_step_size):
+            break
+
+        # change the weights (theta)
+        theta -= step_vector
+    
+    return theta
+

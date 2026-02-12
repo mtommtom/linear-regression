@@ -6,7 +6,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import time
-from algorithms import mean_squared_error, stochastic_gradient_descent, train_test_split, zscore, apply_weights_and_bias
+from scipy.stats import pearsonr, ttest_ind
+from algorithms import mean_squared_error, stochastic_gradient_descent, train_test_split, zscore, apply_weights_and_bias, standard_deviation, optimized_stochastic_gradient_descent
 
 def prepreocess():
     '''
@@ -36,10 +37,21 @@ def multiple_linear_regression(df, stochastic_sample_size):
 def graph_background_information(df):
     '''
     given data frame graph:
+        - distribution of the qualities
         - correlation plot
-        - correlation plot of alcohol vs quality
+        - correlation plot of quality vs alcohol and volatile acidity vs quality
     '''
     sns.set_theme()
+
+    # wine quality distribution
+    value_counts = [int(df['quality'].value_counts()[i]) if i in df['quality'].value_counts() else 0 for i in range(0, 11) ]
+    ax = sns.barplot(x=range(0, 11), y=value_counts)
+    ax.set_title('Distribution of wine quality entries')
+    ax.set_xlabel('wine quality (1-10)')
+    ax.set_ylabel('count')
+    fig = ax.get_figure()
+    fig.tight_layout()
+    fig.savefig('red_wine/wine_quality_distribution.png')
     
     # correlation plot
     correlations = df.corr()
@@ -55,11 +67,26 @@ def graph_background_information(df):
     fig.tight_layout()
     fig.savefig('red_wine/correlations.png')
 
+    def plot_correlation(df, x, y, xlabel = None, ylabel = None):
+        if xlabel is None:
+            xlabel = x
+        if ylabel is None:
+            ylabel = y
+
+        aq_df = df[[x, y]]
+        # get p value
+        slope = stochastic_gradient_descent(aq_df, learning_rate=.001)[0][0]
+        corr, pvalue = pearsonr(aq_df[x], aq_df[y])
+        # plot data
+        jointplot = sns.jointplot(x=x, y=y, data=aq_df, kind='reg', ratio=2)
+        jointplot.figure.suptitle(f'{xlabel} vs {ylabel}\np = {pvalue}')
+        jointplot.figure.tight_layout()
+        jointplot.savefig(f'red_wine/{x}_vs_{y}.png')
+
     # alcohol vs quality
-    jointplot = sns.jointplot(x='quality', y='alcohol', data=df[['quality', 'alcohol']], kind='reg', ratio=2)
-    jointplot.figure.suptitle('quality vs alcohol percent (%)')
-    jointplot.figure.tight_layout()
-    jointplot.savefig('red_wine/alcohol_vs_quality.png')
+    plot_correlation(df, 'alcohol', 'quality', xlabel='alcohol percent')
+    # volatile acidity vs quality
+    plot_correlation(df, 'volatile acidity', 'quality')
 
 
 def graph_trials(results, name, cost=0, time=0):
@@ -82,13 +109,30 @@ def main():
     mini_batch_results, cost_mini = multiple_linear_regression(df, .1)
     mini_batch_time = time.time() - start
 
-    # start = time.time()
-    # batch_results, cost_batch = multiple_linear_regression(df, 1.0)
-    # batch_time = time.time() - start
+    start = time.time()
+    batch_results, cost_batch = multiple_linear_regression(df, 1.0)
+    batch_time = time.time() - start
 
     graph_trials(mini_batch_results, f'Mini-batch Gradient Descent', cost = round(cost_mini, 2), time = round(mini_batch_time, 2))
-    # graph_trials(batch_results, f'Batch Gradient Descent', cost = round(cost_batch, 2), time = round(batch_time, 2))
+    graph_trials(batch_results, f'Batch Gradient Descent', cost = round(cost_batch, 2), time = round(batch_time, 2))
+
+
+def test():
+    df = prepreocess()
+
+    train, test = train_test_split(df)
+    loss_per_epoch = []
+
+    weights, bias = [0 for i in range(len(df.columns) - 1)], 0.0
+    weights, bias = optimized_stochastic_gradient_descent(train, lr=.0001, weights=weights, bias=bias, epoches=100, min_step_size=0.0001)
+
+    print(weights, bias)
+    test_results = mean_squared_error(weights=weights, bias=bias, df=test)
+    print('testing results (mse):', test_results)
+
+
 
 
 if __name__ == '__main__':
-    main()
+    test()
+    # main()
