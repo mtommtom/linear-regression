@@ -118,7 +118,7 @@ def stochastic_gradient_descent(_df, learning_rate=.01, min_step_size=.001, epoc
 def matrix_mean_squared_error(theta, x, y):
     return np.sum(np.square((theta.dot(x.T).T - y).T)) / len(x)
 
-def optimized_stochastic_gradient_descent(df, lr=.01, min_step_size=.001, epoches=100, weights=[1], bias=0, stochastic_sample_size=.1, displayProgress: bool=True, error_over_time = []):
+def optimized_stochastic_gradient_descent(df, lr=.01, min_step_size=.001, epoches=100, weights=[1], bias=0, stochastic_sample_size=.1, displayProgress: bool=True, error_over_time = [], printProgress=True):
     '''
     optimized stochastic gradient descent method by using numpy and linear algebra
     
@@ -131,11 +131,8 @@ def optimized_stochastic_gradient_descent(df, lr=.01, min_step_size=.001, epoche
     :param stochastic_sample_size: percent of each sample group for each epoch
     '''
 
-    # matrix = np.matrix([[df.iloc[i, j] for j in range(len(df.columns))] for name in df.columns])
     matrix = np.matrix([list(df[name]) for name in df.columns]).T
     theta = np.matrix(np.append(np.array(weights), bias))
-    # print(theta)
-    # print("the above should be one list of weights and bias at end of list")
     epoch_number = 0
     while epoch_number < epoches:
         # sample (according to stochastic sample size) the dataframe
@@ -145,26 +142,25 @@ def optimized_stochastic_gradient_descent(df, lr=.01, min_step_size=.001, epoche
         x = _matrix[:, 0:_matrix.shape[1] - 1]
         x = np.column_stack((x, np.ones(len(x))))
         y = _matrix[:, matrix.shape[1] - 1]
-        # print(x)
-        # print("the above should be matrix")
-        # print(y)
-        # print("the above should be just one vector")
 
         # get the step direction vector (direction to go) and the step vector with correct magnitude
         m = len(df)
         step_direction_vector = (2/m) * x.T.dot(theta.dot(x.T).T - y)
         step_vector = step_direction_vector * lr
+
+        # change the weights (theta)
+        theta -= step_vector.T
+
         if displayProgress:
             loss = matrix_mean_squared_error(theta, x, y)
             error_over_time.append(loss)
-            print(f'Epoch [{epoch_number + 1}/{epoches}],   loss: {loss}')
+            if printProgress:
+                print(f'Epoch [{epoch_number + 1}/{epoches}],   loss: {loss}')
 
         # icond = step_direction_vector < min_step_size
         # if icond.any():
         #     break
 
-        # change the weights (theta)
-        theta -= step_vector.T
         epoch_number += 1
     
     return theta
