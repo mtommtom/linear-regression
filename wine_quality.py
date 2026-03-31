@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import time
 from scipy.stats import pearsonr, ttest_ind
-from algorithms import mean_squared_error, stochastic_gradient_descent, train_test_split, zscore, apply_weights_and_bias, standard_deviation, optimized_stochastic_gradient_descent
+from algorithms import mean_squared_error, stochastic_gradient_descent, train_test_split, zscore, apply_weights_and_bias, standard_deviation, optimized_stochastic_gradient_descent, optimized_stochastic_gradient_descent_ridge
 import mplcyberpunk
 
 def prepreocess():
@@ -106,7 +106,7 @@ def graph_background_information(df):
     # volatile acidity vs quality
     plot_correlation(df, 'volatile acidity', 'quality')
 
-def graph_trials(results, name, cost=0, time=0, x=None):
+def graph_trials(results, name, cost=0, time=0, x=None, costs=None):
     '''
     graph and save trail results for the cost function over trails
     '''
@@ -116,7 +116,10 @@ def graph_trials(results, name, cost=0, time=0, x=None):
     # plt.style.use('cyberpunk')
 
     fig, ax = plt.subplots()
-    ax.plot(x, results)
+    ax.plot(x, results, label='loss')
+    if costs is not None:
+        ax.plot(x, costs, color='red', label='cost')
+
     ax.set_xlabel('epoches')
     ax.set_ylabel('loss (mse)')
     ax.set_title(f'{name} - epoches vs loss (mse)\ncost: {cost}\ntime: {time}', wrap=True)
@@ -126,9 +129,13 @@ def graph_trials(results, name, cost=0, time=0, x=None):
     mplcyberpunk.add_gradient_fill(alpha_gradientglow=.4, gradient_start='bottom')
     fig.savefig(f'results/{name}.png')
 
+
 def final_optimized_linear_regression(df):
+    '''
+    example of best linear reression found
+    '''
+    from algorithms import optimized_stochastic_gradient_descent_ridge, optimized_stochastic_gradient_descent_lasso, optimized_stochastic_gradient_descent_elastic_net
     from cross_validation import n_fold_cross_validation
-    plt.tight_layout()
 
     df = prepreocess()
     df = df.loc[:, df.columns != 'pH']
@@ -138,9 +145,9 @@ def final_optimized_linear_regression(df):
     lr = .1
     stochastic_sample_size = .1
     epoches = 1_000
-    n = 3
+    n = 5
 
-    train_test_sets = n_fold_cross_validation(n=3, df=df)
+    train_test_sets = n_fold_cross_validation(n=n, df=df)
 
     for i in range(len(train_test_sets)):
         train = train_test_sets[i][0]
@@ -166,22 +173,25 @@ def final_optimized_linear_regression(df):
         start = time.time()
         final_results = []
         weights, bias = [0 for i in range(len(df.columns) - 1)], 0.0
-        theta = optimized_stochastic_gradient_descent(train, lr=lr, weights=weights, bias=bias, epoches=epoches, min_step_size=0, error_over_time=final_results, stochastic_sample_size=stochastic_sample_size, printProgress=False)
+        theta = optimized_stochastic_gradient_descent_elastic_net(train, lmda=1, lr=lr, weights=weights, bias=bias, epoches=epoches, min_step_size=0, error_over_time=final_results, stochastic_sample_size=stochastic_sample_size, printProgress=False)
 
         # find mean squared error
         weights = [theta[0, i] for i in range(theta.shape[1] - 1)]
         bias = theta[0, theta.shape[1] - 1]
-        test_results = mean_squared_error(df=train, weights=weights, bias=bias)
+        test_results = mean_squared_error(df=test, weights=weights, bias=bias)
 
         final_time = time.time() - start
 
         # plot results
         final_results = final_results[::10]
         epoch_number = range(0, 1_000, 10)
-        graph_trials(final_results, f'{n}-fold ({itr + 1}\\{n}) optimized Mini-batch Gradient Descent', cost = f'{round(test_results, 2)} final loss: {final_results[len(final_results) - 1]}', time = round(final_time, 2), x=epoch_number)
+        graph_trials(final_results, f'{n}-fold ({itr + 1}\\{n})', cost = f'{round(test_results, 2)} final loss: {final_results[len(final_results) - 1]}', time = round(final_time, 2), x=epoch_number)
 
 
 def main():
+    '''
+    build all types of regression
+    '''
     df = prepreocess()
     graph_background_information(df)
 
@@ -206,6 +216,30 @@ def main():
     graph_trials(batch_results, f'Batch Gradient Descent', cost = round(cost_batch, 2), time = round(batch_time, 2))
     graph_trials(o_mini_batch_results, f'(optimized) Mini-batch Gradient Descent', cost = round(o_cost_mini, 2), time = round(o_mini_batch_time, 2))
     graph_trials(o_batch_results, f'(optimized) Batch Gradient Descent', cost = round(o_cost_batch, 2), time = round(o_batch_time, 2))
+
+def easy(df):
+    '''
+    using ml libraries to make a linear regression
+    '''
+    import numpy as np
+    from sklearn.linear_model import LinearRegression, ElasticNet
+    from sklearn.metrics import mean_squared_error
+    from sklearn.model_selection import train_test_split
+
+    inner = [list(df[name]) for name in df.columns]
+    _matrix = np.array(inner).T
+    
+    # establish features (x) and labels (y)
+    x = _matrix[:, 0:_matrix.shape[1] - 1]
+    y = _matrix[:, _matrix.shape[1] - 1]
+
+    X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=0.25, random_state=42)
+
+
+    reg = LinearRegression().fit(X_train, y_train)
+    res = reg.predict(X_test)
+    print(mean_squared_error(y_test, res))
+
 
 if __name__ == '__main__':
     # main()

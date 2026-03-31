@@ -81,16 +81,17 @@ pros
 
 ## Summary of findings
 
-From here we can further minimize the cost of regression by doing the following:
+![final](./results/5-fold%20(5\5).png)
+
+From here we can further minimize the cost of regression by doing the following (all programmed by hand!):
+* having 1000 epoches (instead of 100)
 * mini batch gradient descent
-* having 1000 epoches
 * removing low correlating columns: pH, residual sugar, fixed acidity
 * z score standardization
-* 3 fold cross validation
+* 5 fold cross validation
+* elastic net regression with an optimal lamda determined by cross validation tests
 
-![final](./results/3-fold%20(2\3).png)
-
-At around epoch number 600 the losses start to converge and the final cost achieved is around .5 to .6 in only .06 seconds. This time is very fast considering 10x more echoches were used.
+as a result the cost converges to .34 which is much better then mini batch gradient descent alone which converges to 1.11
 
 ### Citations
 ```
@@ -100,5 +101,4 @@ https://doi.org/10.24432/C56S3T.
 ```
 
 ## TODO
-* implement cross validation algorithm
 * implement a matrix decomposition algorithm to solve a linear regression

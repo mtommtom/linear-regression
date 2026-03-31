@@ -118,7 +118,7 @@ def stochastic_gradient_descent(_df, learning_rate=.01, min_step_size=.001, epoc
 def matrix_mean_squared_error(theta, x, y):
     return np.sum(np.square((theta.dot(x.T).T - y).T)) / len(x)
 
-def optimized_stochastic_gradient_descent(df, lr=.01, min_step_size=.001, epoches=100, weights=[1], bias=0, stochastic_sample_size=.1, displayProgress: bool=True, error_over_time = [], printProgress=True):
+def optimized_stochastic_gradient_descent(df, lr=.01, min_step_size=.001, epoches=100, weights=[1], bias=0, stochastic_sample_size=.1, displayProgress: bool=True, error_over_time = [], printProgress=True, evaluate_progress=False, evaluated_progress=[], train=None):
     '''
     optimized stochastic gradient descent method by using numpy and linear algebra
     
@@ -156,6 +156,12 @@ def optimized_stochastic_gradient_descent(df, lr=.01, min_step_size=.001, epoche
             error_over_time.append(loss)
             if printProgress:
                 print(f'Epoch [{epoch_number + 1}/{epoches}],   loss: {loss}')
+        if evaluate_progress:
+            # calculate the cost function
+            weights = [theta[0, i] for i in range(theta.shape[1] - 1)]
+            bias = theta[0, theta.shape[1] - 1]
+            test_results = mean_squared_error(df=train, weights=weights, bias=bias)
+            evaluated_progress.append(test_results)
 
         # icond = step_direction_vector < min_step_size
         # if icond.any():
@@ -165,3 +171,167 @@ def optimized_stochastic_gradient_descent(df, lr=.01, min_step_size=.001, epoche
     
     return theta
 
+def optimized_stochastic_gradient_descent_ridge(df, lr=.01, min_step_size=.001, epoches=100, weights=[1], bias=0, stochastic_sample_size=.1, displayProgress: bool=True, error_over_time = [], printProgress=True, evaluate_progress=False, evaluated_progress=[], train=None, lmda=1):
+    '''
+    optimized stochastic gradient descent method by using numpy and linear algebra
+    
+    :param df: dataframe of all features and label should be last column
+    :param lr: learning rate
+    :param min_step_size: if step size is less than this end program
+    :param epoches: how many repititions of gradient descent 
+    :param weights: the starting weights
+    :param bias: the starting bias
+    :param stochastic_sample_size: percent of each sample group for each epoch
+    '''
+
+    matrix = np.matrix([list(df[name]) for name in df.columns]).T
+    theta = np.matrix(np.append(np.array(weights), bias))
+    epoch_number = 0
+    while epoch_number < epoches:
+        # sample (according to stochastic sample size) the dataframe
+        _matrix = matrix[random.sample(range(0, len(df)), int(len(df) * stochastic_sample_size))]
+        
+        # establish features (x) and labels (y)
+        x = _matrix[:, 0:_matrix.shape[1] - 1]
+        x = np.column_stack((x, np.ones(len(x))))
+        y = _matrix[:, matrix.shape[1] - 1]
+
+        # get the step direction vector (direction to go) and the step vector with correct magnitude
+        m = len(df)
+        #                                                                this is the ridge penalty
+        # step_direction_vector = (2/m) * (x.T.dot(theta.dot(x.T).T - y) + theta.T * lmda)
+        step_direction_vector = (2/m) * (x.T.dot(theta.dot(x.T).T - y)) + 2/m * (theta.T * lmda)
+        step_vector = step_direction_vector * lr
+
+        # change the weights (theta)
+        theta -= step_vector.T
+
+        if displayProgress:
+            loss = matrix_mean_squared_error(theta, x, y)
+            error_over_time.append(loss)
+            if printProgress:
+                print(f'Epoch [{epoch_number + 1}/{epoches}],   loss: {loss}')
+        if evaluate_progress:
+            # calculate the cost function
+            weights = [theta[0, i] for i in range(theta.shape[1] - 1)]
+            bias = theta[0, theta.shape[1] - 1]
+            test_results = mean_squared_error(df=train, weights=weights, bias=bias)
+            evaluated_progress.append(test_results)
+
+        # icond = step_direction_vector < min_step_size
+        # if icond.any():
+        #     break
+
+        epoch_number += 1
+    
+    return theta
+
+
+def optimized_stochastic_gradient_descent_lasso(df, lr=.01, min_step_size=.001, epoches=100, weights=[1], bias=0, stochastic_sample_size=.1, displayProgress: bool=True, error_over_time = [], printProgress=True, evaluate_progress=False, evaluated_progress=[], train=None, lmda=1):
+    '''
+    optimized stochastic gradient descent method by using numpy and linear algebra
+    
+    :param df: dataframe of all features and label should be last column
+    :param lr: learning rate
+    :param min_step_size: if step size is less than this end program
+    :param epoches: how many repititions of gradient descent 
+    :param weights: the starting weights
+    :param bias: the starting bias
+    :param stochastic_sample_size: percent of each sample group for each epoch
+    '''
+
+    matrix = np.matrix([list(df[name]) for name in df.columns]).T
+    theta = np.matrix(np.append(np.array(weights), bias))
+    epoch_number = 0
+    while epoch_number < epoches:
+        # sample (according to stochastic sample size) the dataframe
+        _matrix = matrix[random.sample(range(0, len(df)), int(len(df) * stochastic_sample_size))]
+        
+        # establish features (x) and labels (y)
+        x = _matrix[:, 0:_matrix.shape[1] - 1]
+        x = np.column_stack((x, np.ones(len(x))))
+        y = _matrix[:, matrix.shape[1] - 1]
+
+        # get the step direction vector (direction to go) and the step vector with correct magnitude
+        m = len(df)
+        #                                                                this is the lasso penalty
+        step_direction_vector = (2/m) * (x.T.dot(theta.dot(x.T).T - y)) + (1/m) * (np.sign(theta.T) * lmda)
+        step_vector = step_direction_vector * lr
+
+        # change the weights (theta)
+        theta -= step_vector.T
+
+        if displayProgress:
+            loss = matrix_mean_squared_error(theta, x, y)
+            error_over_time.append(loss)
+            if printProgress:
+                print(f'Epoch [{epoch_number + 1}/{epoches}],   loss: {loss}')
+        if evaluate_progress:
+            # calculate the cost function
+            weights = [theta[0, i] for i in range(theta.shape[1] - 1)]
+            bias = theta[0, theta.shape[1] - 1]
+            test_results = mean_squared_error(df=train, weights=weights, bias=bias)
+            evaluated_progress.append(test_results)
+
+        # icond = step_direction_vector < min_step_size
+        # if icond.any():
+        #     break
+
+        epoch_number += 1
+             
+    return theta
+
+
+def optimized_stochastic_gradient_descent_elastic_net(df, lr=.01, min_step_size=.001, epoches=100, weights=[1], bias=0, stochastic_sample_size=.1, displayProgress: bool=True, error_over_time = [], printProgress=True, evaluate_progress=False, evaluated_progress=[], train=None, lmda=1):
+    '''
+    optimized stochastic gradient descent method by using numpy and linear algebra
+    
+    :param df: dataframe of all features and label should be last column
+    :param lr: learning rate
+    :param min_step_size: if step size is less than this end program
+    :param epoches: how many repititions of gradient descent 
+    :param weights: the starting weights
+    :param bias: the starting bias
+    :param stochastic_sample_size: percent of each sample group for each epoch
+    '''
+
+    matrix = np.matrix([list(df[name]) for name in df.columns]).T
+    theta = np.matrix(np.append(np.array(weights), bias))
+    epoch_number = 0
+    while epoch_number < epoches:
+        # sample (according to stochastic sample size) the dataframe
+        _matrix = matrix[random.sample(range(0, len(df)), int(len(df) * stochastic_sample_size))]
+        
+        # establish features (x) and labels (y)
+        x = _matrix[:, 0:_matrix.shape[1] - 1]
+        x = np.column_stack((x, np.ones(len(x))))
+        y = _matrix[:, matrix.shape[1] - 1]
+
+        # get the step direction vector (direction to go) and the step vector with correct magnitude
+        m = len(df)
+        #                                                                this is the lasso penalty
+        step_direction_vector = (2/m) * (x.T.dot(theta.dot(x.T).T - y)) + 2/m * (theta.T * lmda) + (1/m) * np.sign(theta.T)
+        step_vector = step_direction_vector * lr
+
+        # change the weights (theta)
+        theta -= step_vector.T
+
+        if displayProgress:
+            loss = matrix_mean_squared_error(theta, x, y)
+            error_over_time.append(loss)
+            if printProgress:
+                print(f'Epoch [{epoch_number + 1}/{epoches}],   loss: {loss}')
+        if evaluate_progress:
+            # calculate the cost function
+            weights = [theta[0, i] for i in range(theta.shape[1] - 1)]
+            bias = theta[0, theta.shape[1] - 1]
+            test_results = mean_squared_error(df=train, weights=weights, bias=bias)
+            evaluated_progress.append(test_results)
+
+        # icond = step_direction_vector < min_step_size
+        # if icond.any():
+        #     break
+
+        epoch_number += 1
+    
+    return theta
